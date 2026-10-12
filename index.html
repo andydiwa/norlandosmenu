@@ -126,7 +126,7 @@ button,input{font:inherit;color:inherit}
 .side{display:none}
 .hint{margin:0 0 12px;font-size:12px;color:rgba(236,226,198,.7)}
 .cards{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start}
-.card{cursor:pointer;background:var(--card);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px;
+.card{box-sizing:border-box;cursor:pointer;background:var(--card);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px;
   animation:cardIn .5s var(--ease) both;animation-delay:calc(var(--i)*50ms + 150ms);transition:background .25s}
 .card:hover{background:rgba(255,255,255,.09)}
 .card.out{opacity:.55}
@@ -302,6 +302,20 @@ function card(it, i, withCat) {
   </article>`;
 }
 
+/* ----- Uniform card sizes: every closed card in a list gets the height of the tallest ----- */
+function equalize(root) {
+  (root || document).querySelectorAll('.cards').forEach(list => {
+    const cards = [...list.querySelectorAll('.card')];
+    cards.forEach(c => { c.style.minHeight = ''; });
+    let max = 0;
+    cards.forEach(c => { if (!c.classList.contains('open')) max = Math.max(max, c.getBoundingClientRect().height); });
+    if (max) cards.forEach(c => { c.style.minHeight = Math.ceil(max) + 'px'; });
+  });
+}
+let eqTimer;
+window.addEventListener('resize', () => { clearTimeout(eqTimer); eqTimer = setTimeout(() => equalize(), 150); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => equalize());
+
 /* ----- Search ----- */
 const q = document.getElementById('q'), clr = document.getElementById('clr'), browse = document.getElementById('browse'), results = document.getElementById('results');
 const INDEX = [];
@@ -317,6 +331,7 @@ function runSearch() {
   results.innerHTML = hits.length
     ? `<p class="rcount">${hits.length} ${hits.length === 1 ? 'dish matches' : 'dishes match'} “${esc(raw)}”. Tap a dish to see its photo.</p><div class="cards">${hits.map((x, i) => card(x.it, i, x.c)).join('')}</div>`
     : `<div class="empty">No dishes match “${esc(raw)}”.<br>Try “adobo”, “ube”, “spicy” or “coffee”.</div>`;
+  equalize(results);
 }
 q.addEventListener('input', runSearch);
 clr.addEventListener('click', () => { q.value = ''; runSearch(); q.focus(); });
@@ -354,6 +369,7 @@ function show(id, dir) {
   window.scrollTo(0, 0);
   const t = cat.querySelector('.tab[aria-current="true"]'); if (t) t.scrollIntoView({ inline: 'center', block: 'nearest' });
   current = k;
+  equalize(cat);
 }
 function goHome(focusSearch) {
   cat.hidden = true; home.hidden = false; current = -1;
